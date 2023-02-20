@@ -31,6 +31,7 @@ class Popen(popen_fork.Popen):
     DupFd = _DupFd
 
     def __init__(self, process_obj):
+        raise RuntimeError("using forkserver, this is not supported with Score-P")
         self._fds = []
         super().__init__(process_obj)
 
