@@ -73,6 +73,7 @@ class Popen(object):
                 os.close(parent_r)
                 code = process_obj._bootstrap()
             finally:
+                print("popen_fork.py:78 os._exit(), avoid atexit and also Score-P's exit")
                 os._exit(code)
         else:
             os.close(child_w)

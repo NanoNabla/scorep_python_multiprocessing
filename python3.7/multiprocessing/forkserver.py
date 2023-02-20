@@ -283,6 +283,7 @@ def main(listener_fd, alive_r, preload, main_path=None, sys_path=None):
                                 sys.excepthook(*sys.exc_info())
                                 sys.stderr.flush()
                             finally:
+								print("popen_forkserver.py:267 os._exit(), avoid atexit and also Score-P's exit")
                                 os._exit(code)
                         else:
                             # Send pid to client process

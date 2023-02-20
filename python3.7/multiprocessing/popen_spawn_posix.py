@@ -66,3 +66,4 @@ class Popen(popen_fork.Popen):
             for fd in (child_r, child_w, parent_w):
                 if fd is not None:
                     os.close(fd)
+            print("exiting spawn._lunch "+str(os.getpid()))

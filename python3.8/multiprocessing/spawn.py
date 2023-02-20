@@ -83,8 +83,19 @@ def get_command_line(**kwds):
         return ([sys.executable, '--multiprocessing-fork'] +
                 ['%s=%r' % item for item in kwds.items()])
     else:
-        prog = 'from multiprocessing.spawn import spawn_main; spawn_main(%s)'
-        prog %= ', '.join('%s=%r' % item for item in kwds.items())
+        prog = 'import scorep.instrumenter; tracer = scorep.instrumenter.get_instrumenter(True, "profile"); tracer.register();'
+        prog += """
+import signal
+import os
+import sys
+def handler(signal_number, stack_frame):
+    print("HELP, got {} from {}, exit !!!!".format(signal_number, stack_frame))
+    exit(0)
+signal.signal(signal.SIGTERM, handler)
+print("signal handler registerd at pid {}".format(os.getpid()))
+print("argv {}".format(sys.argv))
+"""
+        prog += 'from multiprocessing.spawn import spawn_main; spawn_main(%s)'        prog %= ', '.join('%s=%r' % item for item in kwds.items())
         opts = util._args_from_interpreter_flags()
         return [_python_exe] + opts + ['-c', prog, '--multiprocessing-fork']
 

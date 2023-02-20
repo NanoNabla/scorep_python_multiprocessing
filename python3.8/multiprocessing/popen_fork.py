@@ -12,8 +12,9 @@ __all__ = ['Popen']
 class Popen(object):
     method = 'fork'
 
-    def __init__(self, process_obj):
-        util._flush_std_streams()
+    def __init__(self, process_obj, from_spawn=False):
+        if not from_spawn:
+            raise RuntimeError("using fork, this is not supported with Score-P")        util._flush_std_streams()
         self.returncode = None
         self.finalizer = None
         self._launch(process_obj)
@@ -74,6 +75,7 @@ class Popen(object):
                 os.close(parent_w)
                 code = process_obj._bootstrap(parent_sentinel=child_r)
             finally:
+                print("popen_fork.py:78 os._exit(), avoid atexit and also Score-P's exit")
                 os._exit(code)
         else:
             os.close(child_w)

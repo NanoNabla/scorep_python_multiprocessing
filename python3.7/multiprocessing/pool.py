@@ -133,6 +133,7 @@ def worker(inqueue, outqueue, initializer=None, initargs=(), maxtasks=None,
 
         task = job = result = func = args = kwds = None
         completed += 1
+    print("exiting pool "+str(os.getpid()))
     util.debug('worker exiting after %d tasks' % completed)
 
 def _helper_reraises_exception(ex):

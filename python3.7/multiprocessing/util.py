@@ -16,6 +16,11 @@ import threading        # we want threading to install it's
                         # cleanup function before multiprocessing does
 from subprocess import _args_from_interpreter_flags
 
+import uuid
+import tempfile
+import secrets
+import string
+
 from . import process
 
 __all__ = [
@@ -36,7 +41,7 @@ INFO = 20
 SUBWARNING = 25
 
 LOGGER_NAME = 'multiprocessing'
-DEFAULT_LOGGING_FORMAT = '[%(levelname)s/%(processName)s] %(message)s'
+DEFAULT_LOGGING_FORMAT = '[%(levelname)s/%(processName)s/%(process)d] %(message)s'
 
 _logger = None
 _log_to_stderr = False
@@ -444,13 +449,55 @@ def _flush_std_streams():
 # Start a program with only specified fds kept open
 #
 
+child_counter = 0
+
 def spawnv_passfds(path, args, passfds):
+    global child_counter
     import _posixsubprocess
     passfds = tuple(sorted(map(int, passfds)))
     errpipe_read, errpipe_write = os.pipe()
+
+    #################################### DEBUGGING CODE ##############################
+
+    # fork_exec(
+    #       args, executable_list, close_fds, pass_fds, cwd, env,\
+    #       p2cread, p2cwrite, c2pread, c2pwrite,\
+    #       errread, errwrite, errpipe_read, errpipe_write,\
+    #       restore_signals, call_setsid,\
+    #       gid, groups_list, uid,\
+    #       preexec_fn)\
+
+    if os.getenv("SCOREP_PYTHON_BINDINGS_INITIALISED","False") == "true":
+        #
+        # ich hab keine idee ob das so soll ... aber scheint zu funktionieren.
+        # Und ich habe kine lust, alle envs per hand raus zu basteln 😆
+        #
+
+        env = []
+        for k,v in os.environb.items():
+            if not b"SCOREP_EXPERIMENT_DIRECTORY" in k:
+                env.append(k + b"=" + v)
+
+        import scorep._bindings
+ #       exp_dir = scorep._bindings.get_experiment_dir_name()
+        #exp_dir_suffix = "-" + str(os.getpid()) + "-child-" + str(child_counter)
+        #exp_dir_suffix = "-" + str(os.getpid()) + "-child-" + str(child_counter) + "-uuid-" + str(uuid.uuid4())
+#        secrets_rand = secrets.SystemRandom()
+#        uuid = ''.join(secrets_rand.choice(string.ascii_lowercase) for i in range(64))
+#        exp_dir_suffix = "-" + str(os.getpid()) + "-child-" + str(child_counter) + "-uuid-" + uuid
+#        env.append(b"SCOREP_EXPERIMENT_DIRECTORY=" + exp_dir.encode() + exp_dir_suffix.encode("ascii"))
+
+        #exp_dir_b = tempfile.mkdtemp(dir="/tmp/s8916149", prefix=exp_dir)
+        #env.append(b"SCOREP_EXPERIMENT_DIRECTORY=" + exp_dir_b.encode())
+        child_counter += 1
+    else:
+        env = None
+    #################################### END DEBUGGING CODE ##############################
+
+
     try:
         return _posixsubprocess.fork_exec(
-            args, [os.fsencode(path)], True, passfds, None, None,
+            args, [os.fsencode(path)], True, passfds, None, env,
             -1, -1, -1, -1, -1, -1, errpipe_read, errpipe_write,
             False, False, None)
     finally:
