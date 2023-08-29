@@ -324,7 +324,7 @@ if sys.platform != 'win32':
         # on macOS since macOS 10.14 (Mojave). Use spawn by default instead.
         _default_context = DefaultContext(_concrete_contexts['spawn'])
     else:
-        _default_context = DefaultContext(_concrete_contexts['fork'])
+        _default_context = DefaultContext(_concrete_contexts['spawn'])
 
 else:
 

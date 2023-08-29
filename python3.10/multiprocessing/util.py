@@ -443,14 +443,63 @@ def _flush_std_streams():
 #
 # Start a program with only specified fds kept open
 #
-
+child_counter = 0
 def spawnv_passfds(path, args, passfds):
+    global child_counter
     import _posixsubprocess
     passfds = tuple(sorted(map(int, passfds)))
     errpipe_read, errpipe_write = os.pipe()
+
+
+    #################################### DEBUGGING CODE ##############################
+    # fd_names = []
+    # for fh in passfds:
+    #     import os as myos
+
+    #     fd_names.append(myos.readlink(f"/proc/self/fd/{fh}"))
+
+    # print("util.py:464 [path]", path)
+    # print("util.py:464 [args]", args)
+    # print("util.py:464 [fd_names]", fd_names)
+
+    # fork_exec(
+    #       args, executable_list, close_fds, pass_fds, cwd, env,\
+    #       p2cread, p2cwrite, c2pread, c2pwrite,\
+    #       errread, errwrite, errpipe_read, errpipe_write,\
+    #       restore_signals, call_setsid,\
+    #       gid, groups_list, uid,\
+    #       preexec_fn)\
+
+    if os.getenv("SCOREP_PYTHON_BINDINGS_INITIALISED","False") == "true":
+        #
+        # ich hab keine idee ob das so soll ... aber scheint zu funktionieren.
+        # Und ich habe kine lust, alle envs per hand raus zu basteln 😆
+        #
+        import uuid
+        import secrets
+        import string
+
+        env = []
+        for k,v in os.environb.items():
+            if not b"SCOREP_EXPERIMENT_DIRECTORY" in k:
+                env.append(k + b"=" + v)
+
+        import scorep._bindings
+        exp_dir = scorep._bindings.get_experiment_dir_name()
+
+        secrets_rand = secrets.SystemRandom()
+        uuid = ''.join(secrets_rand.choice(string.ascii_lowercase) for i in range(64))
+        exp_dir_suffix = "-" + str(os.getpid()) + "-child-" + str(child_counter) + "-uuid-" + uuid
+        env.append(b"SCOREP_EXPERIMENT_DIRECTORY=" + exp_dir.encode() + exp_dir_suffix.encode("ascii"))
+        child_counter += 1
+    else:
+        env = None
+    #################################### END DEBUGGING CODE ##############################
+
+
     try:
         return _posixsubprocess.fork_exec(
-            args, [os.fsencode(path)], True, passfds, None, None,
+            args, [os.fsencode(path)], True, passfds, None, env,
             -1, -1, -1, -1, -1, -1, errpipe_read, errpipe_write,
             False, False, None, None, None, -1, None)
     finally:
